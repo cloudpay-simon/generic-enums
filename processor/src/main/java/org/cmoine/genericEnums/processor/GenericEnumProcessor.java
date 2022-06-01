@@ -1,7 +1,6 @@
 package org.cmoine.genericEnums.processor;
 
 import com.google.auto.service.AutoService;
-import com.google.common.base.Strings;
 import com.google.common.collect.Maps;
 import com.sun.source.util.Trees;
 import freemarker.template.Configuration;
@@ -127,7 +126,7 @@ public class GenericEnumProcessor extends AbstractProcessor {
                     .map((el) -> new TypeElementWrapper(trees, el))
                     .collect(Collectors.toSet()));
 
-            try (Writer writer = new StringWriter()) {
+            try (Writer writer = sourceFile.openWriter()) {
                 Configuration cfg = new Configuration(Configuration.VERSION_2_3_29);
                 cfg.setClassLoaderForTemplateLoading(getClass().getClassLoader(),
                         getClass().getPackage().getName().replace('.', '/'));
@@ -135,60 +134,12 @@ public class GenericEnumProcessor extends AbstractProcessor {
 
                 final Template template = cfg.getTemplate("template.ftl");
                 template.createProcessingEnvironment(dataModel, writer).process();
-
-                try (Writer sourceWriter = sourceFile.openWriter()) {
-                    sourceWriter.append(prettyPrint(writer.toString()));
-                }
             } catch (TemplateException e) {
                 print(e);
             }
-
         } catch (IOException e) {
             print(e);
         }
-    }
-
-    /**
-     * Very simplistic Java source code formatter. Collapses multiple blank lines into one. Indents based on leading/trailing curly brackets and parenthesis.
-     *
-     * @param source the source code to format.
-     * @return the formatted version of the source string.
-     */
-    private String prettyPrint(final String source) {
-        final String[] lines = source.split("\n");
-        final StringBuilder sb = new StringBuilder();
-        boolean lastLineIsBlank = true;
-        int indent = 0;
-
-        for (String line : lines) {
-            line = line.trim();
-
-            if (lastLineIsBlank && line.isEmpty()) {
-                continue;
-            }
-
-            if (line.startsWith("}") || line.startsWith(")")) {
-                indent = Math.max(0, indent - 4);
-            }
-
-            if (line.isEmpty()) {
-                lastLineIsBlank = true;
-                sb.append('\n');
-
-            } else {
-                lastLineIsBlank = false;
-
-                sb.append(Strings.repeat(" ", indent));
-                sb.append(line);
-                sb.append('\n');
-
-                if (line.endsWith("{") || line.endsWith("(")) {
-                    indent += 4;
-                }
-            }
-        }
-
-        return sb.toString();
     }
 
     private void dump(Element element, int tabCount) {
